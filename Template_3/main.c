@@ -61,6 +61,9 @@ void tast_show()
 		break;
 	}
 }
+/*
+³¬Éù²¨³ÌÐò
+*/
 
 void ultra()
 {
