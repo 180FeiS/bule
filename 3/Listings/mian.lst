@@ -1,0 +1,329 @@
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MIAN
+OBJECT MODULE PLACED IN .\Objects\mian.obj
+COMPILER INVOKED BY: D:\Keil5-1\C51\BIN\C51.EXE mian.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\mian
+                    -.lst) TABS(2) OBJECT(.\Objects\mian.obj)
+
+line level    source
+
+   1          #include <main.h>
+   2          #include <iic.h>
+   3          #include <onewire.h>
+   4          #include <ds1302.h>
+   5          void tast_seg()
+   6          {
+   7   1        if(++key_tt == 20)  {key_tt = 0;arrkey_scan();}
+   8   1        if(++show_tt == 50) {show_tt = 0;show_ref = 1;}
+   9   1        if(++AD_tt == 100)  {AD_tt=0;AD_ref = 1;}
+  10   1        if(++temp_tt == 400) {temp_tt=0;temp_ref = 1;}
+  11   1        if(++time_tt == 1) {time_tt=0;time_ref = 1;}
+  12   1        if(water_flow_flag == 1)
+  13   1        {
+  14   2          if(++water_time ==100) 
+  15   2            {
+  16   3              water_time = 0;water_flow++;
+  17   3              if(water_flow>=99) 
+  18   3              {
+  19   4                water_flow=0;
+  20   4                relay_off;
+  21   4                water_flow_flag = 0;
+  22   4                show_state = 2;
+  23   4              }
+  24   3              if((water_flow%2) == 0)
+  25   3              {
+  26   4                water_price+=1;
+  27   4              }
+  28   3            }
+  29   2        }
+  30   1        
+  31   1      }
+  32          void main()
+  33          {
+  34   1        all_init();
+  35   1        temp_get();delay_ms(900);
+  36   1        temp_value = temp_get()*625;
+  37   1        Timer0_Init();
+  38   1        time_init();
+  39   1        
+  40   1        //AT24C02_write(0x01,0);delay_ms(5);
+  41   1        open = AT24C02_read(0x01);delay_ms(5);
+  42   1        AT24C02_write(0x01,++open);delay_ms(5);
+  43   1        
+  44   1        
+  45   1        while(1)
+  46   1        {
+  47   2          //delay_ms(1);
+  48   2          if(show_ref == 1)
+  49   2          {
+  50   3            show_ref = 0;
+  51   3            tast_show();
+  52   3          }
+  53   2          if(key_flag == 1)
+  54   2          {
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 2   
+
+  55   3            key_flag = 0;
+  56   3            tast_key();
+  57   3          }
+  58   2          if(AD_ref == 1)
+  59   2          {
+  60   3            AD_ref = 0;
+  61   3            AD_value = AD_read(0x01)*1.963;
+  62   3            if(AD_value<=125)ledx_on(1);
+  63   3            if(AD_value>125) ledx_off(1);
+  64   3          }
+  65   2          if(temp_ref ==1)
+  66   2          {
+  67   3            temp_ref = 0;
+  68   3            temp_value = temp_get()*625;
+  69   3          }
+  70   2          if(time_ref == 1)
+  71   2          {
+  72   3            time_ref = 0;
+  73   3            time_get();
+  74   3          }
+  75   2          
+  76   2        }
+  77   1      }
+  78          
+  79          void tast_key()
+  80          {
+  81   1        if((key_value == 7)&&(water_flow_flag == 0))
+  82   1        {
+  83   2          water_price = 0;
+  84   2          key_value = 0;
+  85   2          relay_on;
+  86   2          water_flow_flag = 1;
+  87   2          show_state = 1;
+  88   2        }
+  89   1        if(key_value == 6)
+  90   1        {
+  91   2          water_flow=0;
+  92   2          key_value = 0;
+  93   2          relay_off;
+  94   2          water_flow_flag = 0;
+  95   2          show_state = 2;
+  96   2        }
+  97   1      }
+  98          void tast_show()
+  99          {
+ 100   1        switch(show_state)
+ 101   1        {
+ 102   2          case 1:
+ 103   2          {
+ 104   3            seg_buf[0] = 20;
+ 105   3            seg_buf[1] = water_rate/100+10;
+ 106   3            seg_buf[2] = water_rate%100/10;
+ 107   3            seg_buf[3] = water_rate%10;
+ 108   3            
+ 109   3            seg_buf[4] = water_flow/1000;
+ 110   3            seg_buf[5] = water_flow%1000/100+10;
+ 111   3            seg_buf[6] = water_flow%100/10;
+ 112   3            seg_buf[7] = water_flow%10;
+ 113   3          }
+ 114   2          break;
+ 115   2          case 2:
+ 116   2          {
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 3   
+
+ 117   3            seg_buf[0] = 20;
+ 118   3            seg_buf[1] = water_rate/100+10;
+ 119   3            seg_buf[2] = water_rate%100/10;
+ 120   3            seg_buf[3] = water_rate%10;
+ 121   3            
+ 122   3            seg_buf[4] = water_price/1000;
+ 123   3            seg_buf[5] = water_price%1000/100+10;
+ 124   3            seg_buf[6] = water_price%100/10;
+ 125   3            seg_buf[7] = water_price%10;
+ 126   3          }
+ 127   2          break;
+ 128   2        }
+ 129   1      }
+ 130          
+ 131          void key_scan()
+ 132          {
+ 133   1        switch(key_state)
+ 134   1        {
+ 135   2          case key_check:
+ 136   2          {
+ 137   3            if((P30 == 0) || (P31 == 0) || (P32 == 0) || (P33 == 0)) key_state = key_press;
+ 138   3          }
+ 139   2          break;
+ 140   2          case key_press:
+ 141   2          {
+ 142   3            
+ 143   3              if(P30 == 0) key_value = 7;
+ 144   3              if(P31 == 0) key_value = 6;
+ 145   3              if(P32 == 0) key_value = 5;
+ 146   3              if(P33 == 0) key_value = 4;
+ 147   3              key_state = key_release;
+ 148   3            
+ 149   3          }
+ 150   2          break;
+ 151   2          case key_release:
+ 152   2          {
+ 153   3            if((P30 == 0) || (P31 == 0) || (P32 == 0) || (P33 == 0))
+ 154   3            {
+ 155   4              key_time+=10;
+ 156   4            }
+ 157   3            else 
+ 158   3            {
+ 159   4              key_state = key_check;
+ 160   4              key_flag = 1;
+ 161   4            }
+ 162   3            
+ 163   3          }
+ 164   2          break;
+ 165   2        }
+ 166   1      }
+ 167          
+ 168          
+ 169          void arrkey_scan()
+ 170          {
+ 171   1        uchar key,key1,key2;
+ 172   1        switch(key_state)
+ 173   1        {
+ 174   2          case key_check:
+ 175   2          {
+ 176   3            key_write(0x0f);
+ 177   3            if((key_read()&0x0f)!=0x0f) key_state = key_press;
+ 178   3          }
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 4   
+
+ 179   2          break;
+ 180   2          case key_press:
+ 181   2          {
+ 182   3            key_write(0x0f);
+ 183   3            if((key_read()&0x0f)!=0x0f) 
+ 184   3              key1 = key_read()&0x0f;
+ 185   3            key_write(0xf0);
+ 186   3            if((key_read()&0xf0)!=0xf0) 
+ 187   3              key2 = key_read()&0xf0;
+ 188   3            key = key1|key2;
+ 189   3            if(key!=0xff)
+ 190   3            {
+ 191   4              switch(key)
+ 192   4              {
+ 193   5                case 0x7e:key_value = 7;break;
+ 194   5                case 0x7d:key_value = 6;break;
+ 195   5                case 0x7b:key_value = 5;break;
+ 196   5                case 0x77:key_value = 4;break;
+ 197   5                case 0xbe:key_value = 11;break;
+ 198   5                case 0xbd:key_value = 10;break;
+ 199   5                case 0xbb:key_value = 9;break;
+ 200   5                case 0xb7:key_value = 8;break;
+ 201   5                case 0xde:key_value = 15;break;
+ 202   5                case 0xdd:key_value = 14;break;
+ 203   5                case 0xdb:key_value = 13;break;
+ 204   5                case 0xd7:key_value = 12;break;
+ 205   5                case 0xee:key_value = 19;break;
+ 206   5                case 0xed:key_value = 18;break;
+ 207   5                case 0xeb:key_value = 17;break;
+ 208   5                case 0xe7:key_value = 16;break;
+ 209   5              }
+ 210   4                key_state = key_release;
+ 211   4            }
+ 212   3          }
+ 213   2          break;
+ 214   2          case key_release:
+ 215   2          {
+ 216   3            key_write(0x0f);
+ 217   3            if((key_read()&0x0f)!=0x0f)
+ 218   3            {
+ 219   4              key_time+=10;
+ 220   4            }
+ 221   3            else
+ 222   3            {
+ 223   4              key_state = key_check;
+ 224   4              key_flag = 1;
+ 225   4            }
+ 226   3          }
+ 227   2          break;
+ 228   2        }
+ 229   1      }
+ 230          
+ 231          void key_write(uchar value)
+ 232          {
+ 233   1        uchar val = value;
+ 234   1        P3 = val; P44 = val>>7; P42 = (val&0x40)>>6;
+ 235   1      }
+ 236          unsigned char key_read()
+ 237          {
+ 238   1        uchar val = 0xff,val_p3 = 0,val_p44 = 0,val_p42 = 0;
+ 239   1        val_p3 = P3;val_p44 = P44;val_p42 = P42;
+ 240   1        val = ((val_p3&0X3F)|(val_p44<<7)|(val_p42<<6));
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 5   
+
+ 241   1        return val;
+ 242   1      }
+ 243          
+ 244          void Time0() interrupt 1
+ 245          {
+ 246   1        P0 = 0X00;
+ 247   1        P2|=0XC0;P2&=0XDF;
+ 248   1        P2&=0X1F; //位选端
+ 249   1        P0 = seg_num[seg_buf[num]];
+ 250   1        P2|=0XE0;
+ 251   1        P2&=0X1F; //段选端
+ 252   1        P0 =_crol_(0x01,num);
+ 253   1        P2|=0XC0;P2&=0XDF;
+ 254   1        P2&=0X1F; //位选端
+ 255   1        if(++num ==8) num=0;
+ 256   1        
+ 257   1        tast_seg();
+ 258   1      
+ 259   1      }
+ 260          
+ 261          void all_init()
+ 262          {
+ 263   1        P0 = 0XFF;
+ 264   1        P2|=0X80;P2&=0X9F;
+ 265   1        P2&=0X1F; //流水灯
+ 266   1        P0 = 0XFF;
+ 267   1        P2|=0XE0;
+ 268   1        P2&=0X1F; //段选端
+ 269   1        P0 = 0X00;
+ 270   1        P2|=0XC0;P2&=0XDF;
+ 271   1        P2&=0X1F; //位选端
+ 272   1        P0 = 0X00;
+ 273   1        P2|=0XA0;P2&=0XBF;
+ 274   1        P2&=0X1F; //蜂鸣器继电器
+ 275   1      }
+ 276          
+ 277          void Timer0_Init(void)    //1毫秒@11.0592MHz
+ 278          {
+ 279   1        AUXR |= 0x80;     //定时器时钟1T模式
+ 280   1        TMOD &= 0xF0;     //设置定时器模式
+ 281   1        TL0 = 0xCD;       //设置定时初始值
+ 282   1        TH0 = 0xD4;       //设置定时初始值
+ 283   1        TF0 = 0;        //清除TF0标志
+ 284   1        TR0 = 1;      //定时器0开始计时
+ 285   1        EA = 1;
+ 286   1        ET0 = 1;
+ 287   1      }
+ 288          
+ 289          
+ 290          void delay_ms(uint ms)
+ 291          {
+ 292   1        uint i,j;
+ 293   1        for(i=0;i<ms;i++)
+ 294   1          for(j=0;j<853;j++);
+ 295   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1496    ----
+   CONSTANT SIZE    =     42    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+C51 COMPILER V9.60.0.0   MIAN                                                              03/08/2025 21:24:48 PAGE 6   
+
+   DATA SIZE        =     52       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      6    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

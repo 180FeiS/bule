@@ -1,0 +1,328 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil5-1\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <main.h>
+   2          #include <onewire.h>
+   3          void tast_clock()
+   4          {
+   5   1        if(++key_tt == 20) {key_tt = 0;arrkey_scan();}
+   6   1        if(++show_tt ==20) {show_tt = 0;show_ref=1;}
+   7   1        if(++temp_tt == 400) {temp_tt = 0;temp_ref = 1;}
+   8   1        if(++temp_compare_tt == 10) {temp_compare_tt = 0;temp_compare_ref = 1;}
+   9   1        if(++led_tt == led_time) {led_tt = 0; led_ref = 1;}
+  10   1      }
+  11          void main()
+  12          {
+  13   1        all_init();
+  14   1        temp_get();delay_ms(850);
+  15   1        temp_value = temp_get()*625;
+  16   1        Timer0_Init();
+  17   1        while(1)
+  18   1        {
+  19   2          delay_ms(1);
+  20   2          if(key_flag == 1)
+  21   2          {
+  22   3            tast_key();
+  23   3            key_flag = 0;
+  24   3          }
+  25   2          if(show_ref ==1)
+  26   2          {
+  27   3            show_ref = 0;
+  28   3            tast_show();
+  29   3          }
+  30   2          if(temp_ref == 1)
+  31   2          {
+  32   3            temp_ref  = 0;
+  33   3            temp_value = 200000;
+  34   3            temp_value = temp_get()*625;
+  35   3          }
+  36   2          if(temp_compare_ref == 1)
+  37   2          {
+  38   3            temp_compare_ref = 0;
+  39   3            temp_compare();
+  40   3          }
+  41   2          if(led_ref == 1)
+  42   2          {
+  43   3            led_ref = 0;
+  44   3            if(led_flash == 0){led_flash = 1;ledx_on(1);}
+  45   3            else if(led_flash == 1){led_flash = 0;ledx_off(1);}
+  46   3          }
+  47   2        }
+  48   1      }
+  49          
+  50          void tast_key()
+  51          {
+  52   1        if(key_value == 13)
+  53   1        {
+  54   2          key_value = 0;
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 2   
+
+  55   2          if(show_state == 1)
+  56   2          {
+  57   3            temp_maxmin[0] = 20;temp_maxmin[1] = 20;
+  58   3            temp_maxmin[2] = 20;temp_maxmin[3] = 20;
+  59   3            show_state  = 2;
+  60   3          }
+  61   2          else 
+  62   2          {
+  63   3            if(((temp_maxmin[0]*10+temp_maxmin[1])>=(temp_maxmin[2]*10+temp_maxmin[3]))&&(temp_maxmin[3]!=20))
+  64   3            {
+  65   4              temp_max = temp_maxmin[0]*10+temp_maxmin[1];
+  66   4              temp_min = temp_maxmin[2]*10+temp_maxmin[3];
+  67   4              ledx_off(2);
+  68   4            }
+  69   3            temp_num = 0;
+  70   3            show_state = 1;
+  71   3          }
+  72   2        }
+  73   1        else if(key_value == 14)
+  74   1        {
+  75   2          key_value = 0;
+  76   2          temp_num =0;
+  77   2          temp_maxmin[0] = 20;temp_maxmin[1] = 20;
+  78   2          temp_maxmin[2] = 20;temp_maxmin[3] = 20;
+  79   2        }
+  80   1        else if((temp_num<4)&&(show_state == 2))
+  81   1          {
+  82   2            switch (key_num)
+  83   2            {
+  84   3              case 2:temp_maxmin[temp_num] = 0;break;
+  85   3              case 5:temp_maxmin[temp_num] = 3;break;
+  86   3              case 8:temp_maxmin[temp_num] = 6;break;
+  87   3              case 11:temp_maxmin[temp_num] = 9;break;
+  88   3              case 3:temp_maxmin[temp_num] = 1;break;
+  89   3              case 6:temp_maxmin[temp_num] = 4;break;
+  90   3              case 9:temp_maxmin[temp_num] = 7;break;
+  91   3              case 4:temp_maxmin[temp_num] = 2;break;
+  92   3              case 7:temp_maxmin[temp_num] = 5;break;
+  93   3              case 10:temp_maxmin[temp_num] = 8;break;    
+  94   3              default :break;
+  95   3            }
+  96   2            if(key_num != 0)
+  97   2            {
+  98   3              temp_num++;
+  99   3            }
+ 100   2            key_num = 0;
+ 101   2          }
+ 102   1          if((temp_num==4)&&(show_state == 2))
+ 103   1          {
+ 104   2            if(((temp_maxmin[0]*10+temp_maxmin[1])>=(temp_maxmin[2]*10+temp_maxmin[3]))&&(temp_maxmin[3]!=20))
+ 105   2            {
+ 106   3              ledx_off(2);
+ 107   3            }
+ 108   2            if(((temp_maxmin[0]*10+temp_maxmin[1])<(temp_maxmin[2]*10+temp_maxmin[3]))&&(temp_maxmin[3]!=20))
+ 109   2            {
+ 110   3              ledx_on(2);
+ 111   3            }
+ 112   2          }
+ 113   1        }
+ 114          
+ 115          void tast_show()
+ 116          {
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 3   
+
+ 117   1        switch(show_state)
+ 118   1        {
+ 119   2          case 2:
+ 120   2          {
+ 121   3            seg_buf[0] = 21;
+ 122   3            seg_buf[1] = temp_maxmin[0];
+ 123   3            seg_buf[2] = temp_maxmin[1];
+ 124   3            seg_buf[3] = 20;
+ 125   3            seg_buf[4] = 20;
+ 126   3            seg_buf[5] = 21;
+ 127   3            seg_buf[6] = temp_maxmin[2];
+ 128   3            seg_buf[7] = temp_maxmin[3];
+ 129   3          }
+ 130   2          break;
+ 131   2          case 1:
+ 132   2          {
+ 133   3            seg_buf[0] = 21;
+ 134   3            seg_buf[1] = temp_section;
+ 135   3            seg_buf[2] = 21;
+ 136   3            seg_buf[3] = 20;
+ 137   3            seg_buf[4] = 20;
+ 138   3            seg_buf[5] = 20;
+ 139   3            seg_buf[6] = temp_value/100000;seg_buf[7] = temp_value%100000/10000;
+ 140   3          }
+ 141   2          break;
+ 142   2        }
+ 143   1      }
+ 144          
+ 145          void temp_compare()
+ 146          {
+ 147   1        temp_true = (temp_value/100000)*10+temp_value%100000/10000;
+ 148   1        if((temp_true<temp_min)&&(temp_section != 0))
+ 149   1        {
+ 150   2          led_time = 800;
+ 151   2          led_tt =  0;
+ 152   2          temp_section = 0;
+ 153   2          relay_off;
+ 154   2        }
+ 155   1        else if(((temp_true>=temp_min)&&(temp_true<=temp_max))&&(temp_section != 1))
+ 156   1        {
+ 157   2          led_time = 400;
+ 158   2          led_tt = 0;
+ 159   2          temp_section = 1;
+ 160   2          relay_off;
+ 161   2        }
+ 162   1        else if((temp_true>temp_max)&&(temp_section != 2))
+ 163   1        {
+ 164   2          led_time = 200;
+ 165   2          led_tt = 0;
+ 166   2          relay_on;
+ 167   2          temp_section = 2;
+ 168   2        }
+ 169   1      }
+ 170          
+ 171          void Time0() interrupt 1
+ 172          {
+ 173   1        P0 = 0X00;
+ 174   1        P2|=0XC0;P2&=0XDF;
+ 175   1        P2&=0X1F;
+ 176   1        P0 = seg_num[seg_buf[num]];
+ 177   1        P2|=0XE0;
+ 178   1        P2&=0X1F;
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 4   
+
+ 179   1        P0 = _crol_(0x01,num);
+ 180   1        P2|=0XC0;P2&=0XDF;
+ 181   1        P2&=0X1F;
+ 182   1        if(++num == 8) num=0;
+ 183   1        
+ 184   1        tast_clock();
+ 185   1      }
+ 186          
+ 187          
+ 188          void Timer0_Init(void)    //1毫秒@11.0592MHz
+ 189          {
+ 190   1        AUXR |= 0x80;     //定时器时钟1T模式
+ 191   1        TMOD &= 0xF0;     //设置定时器模式
+ 192   1        TL0 = 0xCD;       //设置定时初始值
+ 193   1        TH0 = 0xD4;       //设置定时初始值
+ 194   1        TF0 = 0;        //清除TF0标志
+ 195   1        TR0 = 1;        //定时器0开始计时
+ 196   1        EA = 1;
+ 197   1        ET0 = 1;
+ 198   1      }
+ 199          
+ 200          
+ 201          void arrkey_scan()
+ 202          {
+ 203   1        uchar key,key1,key2;
+ 204   1        switch(key_state)
+ 205   1        {
+ 206   2          case key_check:
+ 207   2          {
+ 208   3            key_w(0x0f);
+ 209   3            if((key_r()&0x0f)!=0x0f) key_state = key_press;
+ 210   3          }
+ 211   2          break;
+ 212   2          case key_press:
+ 213   2          {
+ 214   3            key_w(0x0f);
+ 215   3            if((key_r()&0x0f)!=0x0f) key1 = key_r()&0x0f;
+ 216   3            key_w(0xf0);
+ 217   3            if((key_r()&0xf0)!=0xf0) key2 = key_r()&0xf0;
+ 218   3            key = key1|key2;
+ 219   3            if(key!=0xff)
+ 220   3            {
+ 221   4              switch(key)
+ 222   4              {
+ 223   5                case 0x7e:key_num = 2;break;
+ 224   5                case 0x7d:key_num = 5;break;
+ 225   5                case 0x7b:key_num = 8;break;
+ 226   5                case 0x77:key_num = 11;break;
+ 227   5                case 0xbe:key_num = 3;break;
+ 228   5                case 0xbd:key_num = 6;break;
+ 229   5                case 0xbb:key_num = 9;break;
+ 230   5                case 0xb7:key_value = 13;break; // 设置
+ 231   5                case 0xde:key_num = 4;break;
+ 232   5                case 0xdd:key_num = 7;break;
+ 233   5                case 0xdb:key_num = 10;break;
+ 234   5                case 0xd7:key_value = 14;break; // 清除
+ 235   5                default :break;
+ 236   5              }
+ 237   4              key_state = key_release;
+ 238   4            }
+ 239   3          }
+ 240   2          break;
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 5   
+
+ 241   2          case key_release:
+ 242   2          {
+ 243   3            key_w(0x0f);
+ 244   3            if((key_r()&0x0f)!=0x0f)
+ 245   3            {
+ 246   4              key_time+=10;
+ 247   4            }
+ 248   3            else 
+ 249   3            {
+ 250   4              key_state = key_check;
+ 251   4              key_flag = 1;
+ 252   4            }
+ 253   3          }
+ 254   2          break;
+ 255   2        }
+ 256   1      }
+ 257          
+ 258          void key_w(uchar value)
+ 259          {
+ 260   1        uchar val = value;
+ 261   1        P3 = val&0x3f;P44 = val>>7;P42 = (val&0x40)>>6;
+ 262   1      }
+ 263          
+ 264          uchar key_r()
+ 265          {
+ 266   1        uchar val = 0xff,val_p3 = 0,val_p44 = 0,val_p42 = 0;
+ 267   1        val_p3 = P3;val_p44 = P44;val_p42 = P42;
+ 268   1        val = ((val_p3&0x3f) | (val_p44<<7) | (val_p42<<6));
+ 269   1        return val;
+ 270   1      }
+ 271          
+ 272          void all_init()
+ 273          {
+ 274   1        P0 = 0XFF;
+ 275   1        P2|=0X80;P2&=0X9F;
+ 276   1        P2&=0X1F; //LED灯
+ 277   1        P0 = 0XFF;
+ 278   1        P2|=0XE0;
+ 279   1        P2&=0X1F; //段选端
+ 280   1        P0 = 0X00;
+ 281   1        P2|=0XC0;P2&=0XDF;
+ 282   1        P2&=0X1F; //位选端
+ 283   1        P0 = 0X00;
+ 284   1        P2|=0XA0;P2&=0XBF;
+ 285   1        P2&=0X1F; //蜂鸣器继电器
+ 286   1        
+ 287   1      }
+ 288          
+ 289          void delay_ms(uint ms)
+ 290          {
+ 291   1        uint i,j;
+ 292   1        for(i=0;i<ms;i++)
+ 293   1          for(j=0;j<853;j++);
+ 294   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1720    ----
+   CONSTANT SIZE    =     44    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     53       2
+C51 COMPILER V9.60.0.0   MAIN                                                              03/10/2025 22:04:32 PAGE 6   
+
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      6    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
