@@ -1,0 +1,280 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              03/19/2025 17:55:59 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil5-1\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <main.h>
+   2          
+   3          void tast_clock()
+   4          {
+   5   1        if(++key_tt == 20) {key_tt = 0;key_scan();}
+   6   1        if(++show_tt == 20) {show_tt = 0;show_ref = 1;}
+   7   1        if(++lcm_tt == 300) {lcm_tt = 0;lcm_ref = 1;}
+   8   1      }
+   9          
+  10          void main()
+  11          {
+  12   1        
+  13   1        all_init();
+  14   1        delay_ms(1);
+  15   1        Timer0_Init();
+  16   1        Timer1_Init();
+  17   1        while(1)
+  18   1        {
+  19   2          if(key_flag == 1)
+  20   2          {
+  21   3            key_flag = 0;
+  22   3            tast_key();
+  23   3          }
+  24   2          if(show_ref == 1)
+  25   2          {
+  26   3            show_ref = 0;
+  27   3            tast_show();
+  28   3          }
+  29   2          if(lcm_ref == 1)
+  30   2          {
+  31   3            lcm_ref = 0;
+  32   3            ultra();
+  33   3          }
+  34   2            
+  35   2        }
+  36   1      }
+  37          
+  38          void tast_key()
+  39          {
+  40   1        if(key_val == 7)
+  41   1        {
+  42   2          key_val = 0;
+  43   2        }
+  44   1      }
+  45          
+  46          void tast_show()
+  47          {
+  48   1        switch(show_state)
+  49   1        {
+  50   2          case 1:
+  51   2          {
+  52   3            seg_buf[0] = key_val/10;
+  53   3            seg_buf[1] = key_val%10;
+  54   3            seg_buf[2] = 20;
+C51 COMPILER V9.60.0.0   MAIN                                                              03/19/2025 17:55:59 PAGE 2   
+
+  55   3            seg_buf[3] = 20;
+  56   3            seg_buf[4] = 20;
+  57   3            seg_buf[5] = lcm/100;
+  58   3            seg_buf[6] = lcm%100/10;
+  59   3            seg_buf[7] = lcm%10;
+  60   3          }
+  61   2          break;
+  62   2        }
+  63   1      }
+  64          
+  65          void ultra()
+  66          {
+  67   1        send();
+  68   1        TR1 = 1;
+  69   1        while((RX == 1)&&(TF1 == 0));
+  70   1        TR1 = 0;
+  71   1        if(TF1 == 1)
+  72   1        {
+  73   2          TF1 = 0;
+  74   2          lcm = 999;
+  75   2        }
+  76   1        else 
+  77   1        {
+  78   2          lcm_time = TH1;
+  79   2          lcm_time<<=8;
+  80   2          lcm_time|=TL1;
+  81   2          lcm = (uint)(lcm_time*0.017);
+  82   2        }
+  83   1        TL1 = 0x00;
+  84   1        TH1 = 0x00;
+  85   1      }
+  86          
+  87          void send()
+  88          {
+  89   1        uint i;
+  90   1        for(i=0;i<8;i++)
+  91   1        {
+  92   2          TX = 1;Delay14us();
+  93   2          TX = 0;Delay14us();
+  94   2        }
+  95   1      }
+  96          
+  97          void Delay14us(void)  //@12.000MHz
+  98          {
+  99   1        unsigned char data i;
+ 100   1      
+ 101   1        _nop_();
+ 102   1        _nop_();
+ 103   1        i = 47;
+ 104   1        while (--i);
+ 105   1      }
+ 106          
+ 107          void Timer1_Init(void)    //1微秒@12.000MHz
+ 108          {
+ 109   1        AUXR &= 0xBF;     //定时器时钟12T模式
+ 110   1        TMOD &= 0x0F;     //设置定时器模式
+ 111   1        TL1 = 0x00;       //设置定时初始值
+ 112   1        TH1 = 0x00;       //设置定时初始值
+ 113   1        TF1 = 0;        //清除TF1标志
+ 114   1        //TR1 = 1;        //定时器1开始计时
+ 115   1      }
+ 116          
+C51 COMPILER V9.60.0.0   MAIN                                                              03/19/2025 17:55:59 PAGE 3   
+
+ 117          
+ 118          void time0() interrupt 1
+ 119          {
+ 120   1        P0 = 0X00;
+ 121   1        P2|=0XC0;P2&=0XDF;
+ 122   1        P2&=0X1F;
+ 123   1        
+ 124   1        P0 = seg_num[seg_buf[num]];
+ 125   1        P2|=0XE0;
+ 126   1        P2&=0X1F;
+ 127   1        
+ 128   1        P0 = _crol_(0x01,num);
+ 129   1        P2|=0XC0;P2&=0XDF;
+ 130   1        P2&=0X1F;
+ 131   1        if(++num == 8) num=0;
+ 132   1        
+ 133   1        tast_clock();
+ 134   1      }
+ 135          
+ 136          
+ 137          
+ 138          void key_scan()
+ 139          {
+ 140   1        uchar key,key1,key2;
+ 141   1        switch(keystate)
+ 142   1        {
+ 143   2          case key_check:
+ 144   2          {
+ 145   3            key_w(0x0f);
+ 146   3            if((key_r()&0x0f)!=0x0f) keystate = key_press;
+ 147   3          }
+ 148   2          break;
+ 149   2          case key_press:
+ 150   2          {
+ 151   3            key_w(0x0f);
+ 152   3            if((key_r()&0x0f)!=0x0f) key1 = key_r()&0x0f;
+ 153   3            key_w(0xf0);
+ 154   3            if((key_r()&0xf0)!=0xf0) key2 = key_r()&0xf0;
+ 155   3            key = key1|key2;
+ 156   3            if(key!=0xff)
+ 157   3            {
+ 158   4              switch(key)
+ 159   4              {
+ 160   5                case 0x7e:key_val = 7;break;
+ 161   5                case 0x7d:key_val = 6;break;
+ 162   5                case 0x7b:key_val = 5;break;
+ 163   5                case 0x77:key_val = 4;break;
+ 164   5                case 0xbe:key_val = 11;break;
+ 165   5                case 0xbd:key_val = 10;break;
+ 166   5                case 0xbb:key_val = 9;break;
+ 167   5                case 0xb7:key_val = 8;break;
+ 168   5                case 0xde:key_val = 15;break;
+ 169   5                case 0xdd:key_val = 14;break;
+ 170   5                case 0xdb:key_val = 13;break;
+ 171   5                case 0xd7:key_val = 12;break;
+ 172   5                case 0xee:key_val = 19;break;
+ 173   5                case 0xed:key_val = 18;break;
+ 174   5                case 0xeb:key_val = 17;break;
+ 175   5                case 0xe7:key_val = 16;break;
+ 176   5              }
+ 177   4              keystate = key_release;
+ 178   4            }
+C51 COMPILER V9.60.0.0   MAIN                                                              03/19/2025 17:55:59 PAGE 4   
+
+ 179   3          }
+ 180   2          break;
+ 181   2          case key_release:
+ 182   2          {
+ 183   3            key_w(0x0f);
+ 184   3            if((key_r()&0x0f)!=0x0f)
+ 185   3            {
+ 186   4              key_time+=10;
+ 187   4            }
+ 188   3            else 
+ 189   3            {
+ 190   4              keystate = key_check;
+ 191   4              key_flag = 1;
+ 192   4            }
+ 193   3          }
+ 194   2          break;
+ 195   2        }
+ 196   1      }
+ 197          
+ 198          void key_w(uchar value)
+ 199          {
+ 200   1        uchar val = value;
+ 201   1        P3 = val&0X3F;P44 = val>>7;P42 = (val&0x40)>>6;
+ 202   1      }
+ 203          uchar key_r()
+ 204          {
+ 205   1        uchar val = 0XFF,val_P3 = 0,val_P42 = 0,val_P44 = 0;
+ 206   1        val_P3 = P3;val_P42 = P42;val_P44 = P44;
+ 207   1        val = ((val_P3&0x3f)|(val_P42<<6)|(val_P44<<7));
+ 208   1        return val;
+ 209   1      }
+ 210          
+ 211          void Timer0_Init(void)    //1毫秒@12.000MHz
+ 212          {
+ 213   1        AUXR |= 0x80;     //定时器时钟1T模式
+ 214   1        TMOD &= 0xF0;     //设置定时器模式
+ 215   1        TL0 = 0x20;       //设置定时初始值
+ 216   1        TH0 = 0xD1;       //设置定时初始值
+ 217   1        TF0 = 0;        //清除TF0标志
+ 218   1        TR0 = 1;        //定时器0开始计时
+ 219   1        EA = 1;
+ 220   1        ET0 = 1;
+ 221   1      }
+ 222          
+ 223          
+ 224          void all_init()
+ 225          {
+ 226   1        P0 = 0XFF;
+ 227   1        P2|=0X80;P2&=0X9F;
+ 228   1        P2&=0X1F; //流水灯
+ 229   1        
+ 230   1        P0 = 0XFF;
+ 231   1        P2|=0XE0;
+ 232   1        P2&=0X1F; //段
+ 233   1         
+ 234   1        P0 = 0X00;
+ 235   1        P2|=0XC0;P2&=0XDF;
+ 236   1        P2&=0X1F; //位
+ 237   1        
+ 238   1        P0 = 0X00;
+ 239   1        P2|=0XA0;P2&=0XBF;
+ 240   1        P2&=0X1F; //蜂鸣器继电器
+C51 COMPILER V9.60.0.0   MAIN                                                              03/19/2025 17:55:59 PAGE 5   
+
+ 241   1      }
+ 242          
+ 243          void delay_ms(uint ms)
+ 244          {
+ 245   1        uint i,j;
+ 246   1        for(i=0;i<ms;i++)
+ 247   1          for(j=0;j<853;j++);
+ 248   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    916    ----
+   CONSTANT SIZE    =     42    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     32       4
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
