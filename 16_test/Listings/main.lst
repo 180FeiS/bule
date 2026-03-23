@@ -1,0 +1,450 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil5-1\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <main.h>
+   2          #include <onewire.h>
+   3          #include <iic.h>
+   4          #include <ds1302.h>
+   5          
+   6          
+   7          void tast_clock()
+   8          {
+   9   1        if(++key_tt == 10) {key_tt = 0;key_scan();}
+  10   1        if(++show_tt == 10) {show_tt = 0;show_ref = 1;}
+  11   1        //if(++ultra_tt == 500) {ultra_tt = 0;ultra_ref = 1;}
+  12   1        if(++pwm_tt == 500) {pwm_tt = 0;pwm_ref = 1;}
+  13   1        if(++temp_tt == 500) {temp_tt = 0;temp_ref = 1;}
+  14   1        if(++AD_tt == 500) {AD_tt = 0;AD_ref = 1;}
+  15   1        if(++time_tt == 950) {time_tt = 0;time_ref = 1;}
+  16   1      }
+  17          
+  18          void main()
+  19          {
+  20   1        all_init();
+  21   1        temp_get();delay_ms(900);
+  22   1        temp_val =  temp_get()*625;
+  23   1        Timer2_Init();
+  24   1        //Timer1_Init();
+  25   1        Timer0_Init();
+  26   1        Uart1_Init();
+  27   1        //AT_W(0x00,0);
+  28   1        open = AT_R(0x00);
+  29   1        AT_W(0x00,++open);
+  30   1        time_init();time_get();
+  31   1        while(1)
+  32   1        {
+  33   2          if(key_flag)
+  34   2          {
+  35   3            key_flag = 0;
+  36   3            tast_key();
+  37   3          }
+  38   2          if(show_ref)
+  39   2          {
+  40   3            show_ref = 0;
+  41   3            tast_show();
+  42   3          }
+  43   2          
+  44   2      //    if(ultra_ref)
+  45   2      //    {
+  46   2      //      ultra_ref = 0;
+  47   2      //      ultra();
+  48   2      //    }
+  49   2          
+  50   2          if(pwm_ref)
+  51   2          {
+  52   3            pwm_ref = 0;
+  53   3      //      pwm_freq = 100000/pwm_freq_para-1;
+  54   3      //      pwm_duty = 100000/pwm_freq_para*pwm_duty_para/100;
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 2   
+
+  55   3            pwm_in_duty = pwm_h_save*100/(pwm_l_save+pwm_h_save);
+  56   3            pwm_in_freq = 100000/(pwm_l_save+pwm_h_save);
+  57   3          }
+  58   2          
+  59   2          if(temp_ref)
+  60   2          {
+  61   3            temp_ref = 0;
+  62   3            temp_val =  temp_get()*625;
+  63   3          }
+  64   2          if(AD_ref)
+  65   2          {
+  66   3            AD_ref = 0;
+  67   3            AD_val = AD_R(0x03);
+  68   3            AD_W(AD_val);
+  69   3            AD_val = AD_val *1.963;
+  70   3          }
+  71   2          
+  72   2          if(time_ref)
+  73   2          {
+  74   3            time_ref = 0;
+  75   3            time_get();
+  76   3          }
+  77   2        }
+  78   1      }
+  79          
+  80          //按键
+  81          void tast_key()
+  82          {
+  83   1        if(key_val == 7)
+  84   1        {
+  85   2          key_val = 0;
+  86   2        }
+  87   1        if(key_val == 6)
+  88   1        {
+  89   2          key_val = 0;
+  90   2          uart(uart_receive);
+  91   2        }
+  92   1      }
+  93          
+  94          //显示
+  95          void tast_show()
+  96          {
+  97   1        switch(show_state)
+  98   1        {
+  99   2          case 1:
+ 100   2          {
+ 101   3            seg_buf[0] = time_ds[2]/10;
+ 102   3            seg_buf[1] = time_ds[2]%10;
+ 103   3            seg_buf[2] = 20;
+ 104   3            seg_buf[3] = time_ds[1]/10;
+ 105   3            seg_buf[4] = time_ds[1]%10;
+ 106   3            seg_buf[5] = 20;
+ 107   3            seg_buf[6] = time_ds[0]/10;
+ 108   3            seg_buf[7] = time_ds[0]%10;
+ 109   3          }
+ 110   2          break;
+ 111   2        }
+ 112   1      }
+ 113          //串口
+ 114          
+ 115          void uart(uchar *p)
+ 116          {
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 3   
+
+ 117   1        uchar index = 0;
+ 118   1        do
+ 119   1        {
+ 120   2          SBUF = p[index++];
+ 121   2          while(TI == 0);
+ 122   2          TI = 0;
+ 123   2        }
+ 124   1        while(p[index]!=0);
+ 125   1      }
+ 126          
+ 127          void Uart1_Isr(void) interrupt 4
+ 128          {
+ 129   1        if (RI)       //检测串口1接收中断
+ 130   1        {
+ 131   2          RI = 0;     //清除串口1接收中断请求位
+ 132   2          uart_send = SBUF;
+ 133   2          if(uart_send == '1') {led_on(1);}
+ 134   2          else if(uart_send == '2') {led_off(1);}
+ 135   2        }
+ 136   1      }
+ 137          
+ 138          void Uart1_Init(void) //1200bps@12.000MHz
+ 139          {
+ 140   1        SCON = 0x50;    //8位数据,可变波特率
+ 141   1        AUXR |= 0x40;   //定时器时钟1T模式
+ 142   1        AUXR &= 0xFE;   //串口1选择定时器1为波特率发生器
+ 143   1        TMOD &= 0x0F;   //设置定时器模式
+ 144   1        TL1 = 0x3C;     //设置定时初始值
+ 145   1        TH1 = 0xF6;     //设置定时初始值
+ 146   1        ET1 = 0;      //禁止定时器中断
+ 147   1        TR1 = 1;      //定时器1开始计时
+ 148   1        ES = 1;       //使能串口1中断
+ 149   1        EA = 1;
+ 150   1      }
+ 151          
+ 152          
+ 153          //串口
+ 154          
+ 155          
+ 156          //pwm
+ 157          
+ 158          void Timer0() interrupt 1
+ 159          {
+ 160   1        //led_on(1);
+ 161   1      //  pwm_count++;
+ 162   1      //  if(pwm_count == pwm_duty){pwm_out = 0;}
+ 163   1      //  else if(pwm_count == pwm_freq){pwm_out = 1;pwm_count = 0;}
+ 164   1        
+ 165   1        if(pwm_in == 1)
+ 166   1        {
+ 167   2          pwm_h++;
+ 168   2          if(pwm_in_flag == 1)
+ 169   2          {
+ 170   3            pwm_l_save = pwm_l;
+ 171   3            pwm_l = 0;
+ 172   3            pwm_in_flag = 0;
+ 173   3          }
+ 174   2        }
+ 175   1        if(pwm_in == 0)
+ 176   1        {
+ 177   2          pwm_l++;
+ 178   2          if(pwm_in_flag == 0)
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 4   
+
+ 179   2          {
+ 180   3            pwm_h_save = pwm_h;
+ 181   3            pwm_h = 0;
+ 182   3            pwm_in_flag = 1;
+ 183   3          }
+ 184   2        }
+ 185   1      }
+ 186          
+ 187          void Timer0_Init(void)    //10微秒@12.000MHz
+ 188          {
+ 189   1        AUXR |= 0x80;     //定时器时钟1T模式
+ 190   1        TMOD &= 0xF0;     //设置定时器模式
+ 191   1        TL0 = 0x88;       //设置定时初始值
+ 192   1        TH0 = 0xFF;       //设置定时初始值
+ 193   1        TF0 = 0;        //清除TF0标志
+ 194   1        TR0 = 1;        //定时器0开始计时
+ 195   1        EA = 1;
+ 196   1        ET0 = 1;
+ 197   1        PT0 = 1;
+ 198   1      }
+ 199          
+ 200          
+ 201          //超声波
+ 202          /*
+ 203          void ultra()
+ 204          {
+ 205            send_wave();
+ 206            TR1 = 1;
+ 207            while((RX == 1)&&(TF1 == 0));
+ 208            TR1 = 0;
+ 209            if(TF1 == 1)
+ 210            {
+ 211              TF1 = 0;
+ 212              lcm = 99;
+ 213            }
+ 214            else if(RX == 0)
+ 215            {
+ 216              RX = 1;
+ 217              lcm_time = TH1<<8;
+ 218              lcm_time|=TL1;
+ 219              lcm = (uint)(lcm_time*0.017);
+ 220            }
+ 221            TH1 = 0x00; TL1 = 0x00;
+ 222          }
+ 223          
+ 224          void send_wave()
+ 225          {
+ 226            uchar i = 0;
+ 227            for(i=0;i<8;i++)
+ 228            {
+ 229              TX = 1;Delay15us();
+ 230              TX = 0;Delay15us();
+ 231            }
+ 232          }
+ 233          void Timer1_Init(void)    //1微秒@12.000MHz
+ 234          {
+ 235            AUXR &= 0xBF;     //定时器时钟12T模式
+ 236            TMOD &= 0x0F;     //设置定时器模式
+ 237            TL1 = 0x00;       //设置定时初始值
+ 238            TH1 = 0x00;       //设置定时初始值
+ 239            TF1 = 0;        //清除TF1标志
+ 240            //TR1 = 1;        //定时器1开始计时
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 5   
+
+ 241          }
+ 242          
+ 243          
+ 244          void Delay15us(void)  //@12.000MHz
+ 245          {
+ 246            unsigned char data i;
+ 247          
+ 248            _nop_();
+ 249            _nop_();
+ 250            i = 42;
+ 251            while (--i);
+ 252          }
+ 253          */
+ 254          void Timer2() interrupt 12
+ 255          {
+ 256   1        P0 = 0X00;
+ 257   1        P2|=0XC0;P2&=0XDF;
+ 258   1        P2&=0X1F;
+ 259   1        
+ 260   1        P0 = seg_num[seg_buf[num]];
+ 261   1        P2|=0XE0;
+ 262   1        P2&=0X1F;
+ 263   1        
+ 264   1        P0 = _crol_(0x01,num);
+ 265   1        P2|=0XC0;P2&=0XDF;
+ 266   1        P2&=0X1F;
+ 267   1        if(++num == 8) num = 0;
+ 268   1        
+ 269   1        tast_clock();
+ 270   1      }
+ 271          
+ 272          void Timer2_Init(void)    //1毫秒@12.000MHz
+ 273          {
+ 274   1        AUXR |= 0x04;     //定时器时钟1T模式
+ 275   1        T2L = 0x20;       //设置定时初始值
+ 276   1        T2H = 0xD1;       //设置定时初始值
+ 277   1        AUXR |= 0x10;     //定时器2开始计时
+ 278   1        EA = 1;
+ 279   1        IE2|=0X04;
+ 280   1      }
+ 281          //按键 独立
+ 282          void key_scan()
+ 283          {
+ 284   1        switch(keystate)
+ 285   1        {
+ 286   2          case key_check:
+ 287   2          {
+ 288   3            if((P30 == 0)||(P31 == 0)||(P32 == 0)||(P33 == 0))
+ 289   3            keystate = key_press;
+ 290   3          }
+ 291   2          break;
+ 292   2          case key_press:
+ 293   2          {
+ 294   3            if(P30 == 0) key_val = 7;
+ 295   3            if(P31 == 0) key_val = 6;
+ 296   3            if(P32 == 0) key_val = 5;
+ 297   3            if(P33 == 0) key_val = 4;
+ 298   3            keystate = key_release;
+ 299   3          }
+ 300   2          break;
+ 301   2          case key_release:
+ 302   2          {
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 6   
+
+ 303   3            if((P30 == 0)||(P31 == 0)||(P32 == 0)||(P33 == 0))
+ 304   3            {
+ 305   4              key_time+=10;
+ 306   4            }
+ 307   3            else 
+ 308   3            {
+ 309   4              key_flag = 1;
+ 310   4              keystate = key_check;
+ 311   4            }
+ 312   3          }
+ 313   2          break;
+ 314   2        }
+ 315   1      }
+ 316          
+ 317          //按键 矩阵
+ 318          void key_arrscan()
+ 319          {
+ 320   1        uchar key,key1,key2;
+ 321   1        switch(keystate)
+ 322   1        {
+ 323   2          case key_check:
+ 324   2          {
+ 325   3            key_w(0x0f);
+ 326   3            if((key_r()&0x0f)!=0x0f) keystate = key_press;
+ 327   3          }
+ 328   2          break;
+ 329   2          case key_press:
+ 330   2          {
+ 331   3            key_w(0x0f);
+ 332   3            if((key_r()&0x0f)!=0x0f) key1 = key_r()&0x0f;
+ 333   3            key_w(0xf0);
+ 334   3            if((key_r()&0xf0)!=0xf0) key2 = key_r()&0xf0;
+ 335   3            key = key1|key2;
+ 336   3            key|=0x10;
+ 337   3            if(key!=0xff)
+ 338   3            {
+ 339   4              switch(key)
+ 340   4              {
+ 341   5                case 0x7e:key_val = 7;break;
+ 342   5                case 0x7d:key_val = 6;break;
+ 343   5                case 0x7b:key_val = 5;break;
+ 344   5                case 0x77:key_val = 4;break;
+ 345   5                case 0xbe:key_val = 11;break;
+ 346   5                case 0xbd:key_val = 10;break;
+ 347   5                case 0xbb:key_val = 9;break;
+ 348   5                case 0xb7:key_val = 8;break;
+ 349   5                case 0xde:key_val = 15;break;
+ 350   5                case 0xdd:key_val = 14;break;
+ 351   5                case 0xdb:key_val = 13;break;
+ 352   5                case 0xd7:key_val = 12;break;
+ 353   5              }
+ 354   4              keystate = key_release;
+ 355   4            }
+ 356   3          }
+ 357   2          break;
+ 358   2          case key_release:
+ 359   2          {
+ 360   3            key_w(0x0f);
+ 361   3            if((key_r()&0x0f)!=0x0f)
+ 362   3            {
+ 363   4              key_time+=10;
+ 364   4            }
+C51 COMPILER V9.60.0.0   MAIN                                                              04/12/2025 19:35:50 PAGE 7   
+
+ 365   3            else 
+ 366   3            {
+ 367   4              key_flag = 1;
+ 368   4              keystate = key_check;
+ 369   4            }
+ 370   3          }
+ 371   2          break;
+ 372   2        }
+ 373   1      }
+ 374          
+ 375          void key_w(uchar value)
+ 376          {
+ 377   1        uchar val = value;
+ 378   1        P30 = (val&0X01);P31 = ((val&0x02)>>1);P32 = ((val&0x04)>>2);
+ 379   1        P33 = ((val&0x08)>>3);P35 = ((val&0x20)>>5);
+ 380   1        P44 = (val>>7);P42 = ((val&0X40)>>6);
+ 381   1      }
+ 382          
+ 383          unsigned char key_r()
+ 384          {
+ 385   1        uchar val = 0xff,val_P3 = 0,val_P44 = 0,val_P42 = 0;
+ 386   1        val_P3 = P3;val_P44 = P44;val_P42 = P42;
+ 387   1        val = ((val_P3&0x2f)|(val_P44<<7)|(val_P42<<6));
+ 388   1        return val;
+ 389   1      }
+ 390          
+ 391          void delay_ms(uint ms)
+ 392          {
+ 393   1        uint i,j;
+ 394   1        for(i = 0;i<ms;i++)
+ 395   1          for(j = 0;j<853;j++);
+ 396   1      }
+ 397          void all_init()
+ 398          {
+ 399   1        P0 = 0XFF;
+ 400   1        P2|=0X80;P2&=0X9F;
+ 401   1        P2&=0X1F; // 灯
+ 402   1        
+ 403   1        P0 = 0XFF;
+ 404   1        P2|=0XE0;
+ 405   1        P2&=0X1F; // 段
+ 406   1        
+ 407   1        P0 = 0X00;
+ 408   1        P2|=0XC0;P2&=0XDF;
+ 409   1        P2&=0X1F; //位
+ 410   1        
+ 411   1        P0 = 0X00;
+ 412   1        P2|=0XA0;P2&=0XBF;
+ 413   1        P2&=0X1F; //蜂鸣器继电器
+ 414   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1390    ----
+   CONSTANT SIZE    =     42    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     80       5
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      7    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
